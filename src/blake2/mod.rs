@@ -17,7 +17,7 @@ mod avx2;
 
 mod implementation {
     #[cfg(not(all(target_arch = "x86_64", target_feature = "avx")))]
-    pub use super::reference::{EngineB, EngineS};
+    pub use super::reference::{blake2b_compress, blake2s_compress, EngineB, EngineS};
 
     #[cfg(all(target_arch = "x86_64", target_feature = "avx"))]
     pub use super::avx::EngineS;
@@ -32,4 +32,4 @@ mod implementation {
     pub use super::avx2::EngineB;
 }
 
-pub use implementation::{EngineB, EngineS};
+pub use implementation::{blake2b_compress, blake2s_compress, EngineB, EngineS};

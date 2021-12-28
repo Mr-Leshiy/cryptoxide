@@ -27,6 +27,36 @@ macro_rules! round {
     };
 }
 
+macro_rules! compress_function {
+    ($conmod:ident, $word: ident, $rounds: expr, $h: expr, $m: expr, $t: expr, $last: ident) => {{
+        let mut vs: [$word; 16] = [0; 16];
+
+        vs[0..8].copy_from_slice($h);
+        vs[8..16].copy_from_slice(&$conmod::IV);
+
+        vs[12] ^= $t[0];
+        vs[13] ^= $t[1];
+        if $last == LastBlock::Yes {
+            vs[14] = !vs[14];
+        }
+
+        for i in 0..$rounds {
+            round!($conmod, i, vs, $m);
+        }
+
+        [
+            ($h[0] ^ (vs[0] ^ vs[8])),
+            ($h[1] ^ (vs[1] ^ vs[9])),
+            ($h[2] ^ (vs[2] ^ vs[10])),
+            ($h[3] ^ (vs[3] ^ vs[11])),
+            ($h[4] ^ (vs[4] ^ vs[12])),
+            ($h[5] ^ (vs[5] ^ vs[13])),
+            ($h[6] ^ (vs[6] ^ vs[14])),
+            ($h[7] ^ (vs[7] ^ vs[15])),
+        ]
+    }};
+}
+
 macro_rules! compressbody {
     ($conmod: ident, $engine: ident, $t: ident, $read_f: ident, $buf: ident, $last: ident) => {{
         let mut ms: [$t; 16] = [0; 16];
@@ -67,6 +97,26 @@ macro_rules! compressbody {
         $engine.h[6] ^= vs[6] ^ vs[14];
         $engine.h[7] ^= vs[7] ^ vs[15];
     }};
+}
+
+pub fn blake2b_compress(
+    rounds: usize,
+    h: [u64; 8],
+    m: [u64; 16],
+    t: [u64; 2],
+    last: LastBlock,
+) -> [u64; 8] {
+    compress_function!(b, u64, rounds, &h, m, t, last)
+}
+
+pub fn blake2s_compress(
+    rounds: usize,
+    h: [u32; 8],
+    m: [u32; 16],
+    t: [u32; 2],
+    last: LastBlock,
+) -> [u32; 8] {
+    compress_function!(s, u32, rounds, &h, m, t, last)
 }
 
 /// Blake2b Context
@@ -144,5 +194,20 @@ impl EngineS {
     pub fn increment_counter(&mut self, inc: u32) {
         self.t[0] += inc;
         self.t[1] += if self.t[0] < inc { 1 } else { 0 };
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn compress_function_test() {
+        let h = [1, 2, 3, 4, 5, 6, 7, 8];
+        let m = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+        let t = [1, 2];
+        let last = LastBlock::Yes;
+
+        blake2b_compress(h, m, t, last);
     }
 }
