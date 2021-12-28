@@ -105,8 +105,21 @@ pub fn blake2b_compress(
     m: [u64; 16],
     t: [u64; 2],
     last: LastBlock,
-) -> [u64; 8] {
-    compress_function!(b, u64, rounds, &h, m, t, last)
+) -> [u8; 64] {
+    let res = compress_function!(b, u64, rounds, &h, m, t, last);
+    let mut out = [0_u8; 64];
+    for i in 0..res.len() {
+        let bytes = res[i].to_le_bytes();
+        out[i] = bytes[0];
+        out[i + 1] = bytes[1];
+        out[i + 2] = bytes[2];
+        out[i + 3] = bytes[3];
+        out[i + 4] = bytes[4];
+        out[i + 5] = bytes[5];
+        out[i + 6] = bytes[6];
+        out[i + 7] = bytes[7];
+    }
+    out
 }
 
 pub fn blake2s_compress(
@@ -115,8 +128,17 @@ pub fn blake2s_compress(
     m: [u32; 16],
     t: [u32; 2],
     last: LastBlock,
-) -> [u32; 8] {
-    compress_function!(s, u32, rounds, &h, m, t, last)
+) -> [u8; 32] {
+    let res = compress_function!(s, u32, rounds, &h, m, t, last);
+    let mut out = [0_u8; 32];
+    for i in 0..res.len() {
+        let bytes = res[i].to_le_bytes();
+        out[i] = bytes[0];
+        out[i + 1] = bytes[1];
+        out[i + 2] = bytes[2];
+        out[i + 3] = bytes[3];
+    }
+    out
 }
 
 /// Blake2b Context
@@ -194,20 +216,5 @@ impl EngineS {
     pub fn increment_counter(&mut self, inc: u32) {
         self.t[0] += inc;
         self.t[1] += if self.t[0] < inc { 1 } else { 0 };
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn compress_function_test() {
-        let h = [1, 2, 3, 4, 5, 6, 7, 8];
-        let m = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
-        let t = [1, 2];
-        let last = LastBlock::Yes;
-
-        blake2b_compress(h, m, t, last);
     }
 }
